@@ -13,7 +13,7 @@ w_e_max = v_e / R_e;     % Max angular velocity of evader (27.78 rad/s)
 
 l_cap = 1.0;             % Capture radius (m)
 r_det = 25.0;            % Initial detection distance (m) [15, 50]
-r_jink = 3.0;            % Critical distance where prey triggers jink (m)
+r_jink = 2.5;            % Critical distance where prey triggers jink (m)
 T_max = 15.0;            % Raptor stamina limit (s)
 dt = 0.005;              % Time step (s)
 N = round(T_max / dt);
@@ -45,6 +45,7 @@ captured = false;
 end_idx = N;
 is_jinking = false;
 theta_target = 0;
+optimal_angle = deg2rad(110);
 
 %% 3. Time-Stepping Simulation Loop (Forward Euler)
 for k = 1:N-1
@@ -72,7 +73,7 @@ for k = 1:N-1
 
     if ~is_jinking && dist_P(k) <= r_jink
         is_jinking = true;
-        theta_target = theta_LOS + pi / 2;
+        theta_target = theta_LOS + optimal_angle;
     end
 
     if is_jinking
@@ -218,6 +219,7 @@ function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
     y_P = r_det * sin(alpha_1);
     theta_P = 0;
     capture_time = T_max;
+    optimal_angle = deg2rad(110);
     is_jinking = false;
     theta_target = 0;
 
@@ -243,7 +245,7 @@ function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
 
         if ~is_jinking && dist_P <= r_jink
             is_jinking = true;
-            theta_target = theta_LOS + pi / 2;
+            theta_target = theta_LOS + optimal_angle;
         end
 
         if is_jinking

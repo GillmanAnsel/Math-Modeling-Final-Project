@@ -13,7 +13,7 @@ w_e_max = v_e / R_e;     % Max angular velocity of evader (27.78 rad/s)
 
 l_cap = 1.0;             % Capture radius (m)
 r_det = 25.0;            % Initial detection distance (m) [15, 50]
-r_jink = 3.5;            % Critical jink distance (m)
+r_jink = 2.5;            % Critical jink distance (m)
 tau_max = 0.6;           % Max look-ahead time for P2 lead pursuit (s)
 T_max = 15.0;            % Raptor stamina limit (s)
 dt = 0.005;              % Time step (s)
@@ -46,7 +46,9 @@ x_P2(1) = -r_det * cos(-alpha); y_P2(1) =  r_det * sin(-alpha); theta_P2(1) = 0;
 
 captured = false;
 end_idx = N;
-jink_dir = 0;
+is_jinking = false;
+theta_target = 0;
+optimal_angle = deg2rad(110);
 
 %% 3. Time-Stepping Simulation Loop (Forward Euler)
 for k = 1:N-1
@@ -81,16 +83,28 @@ for k = 1:N-1
         w_P2 = w_p_max * sign(dtheta_P2);
     end
     
-    % --- Evader Control: Commit to the first jink direction ---
-    if jink_dir ~= 0
-        w_E = jink_dir * w_e_max;
-    elseif d1(k) <= r_jink || d2(k) <= r_jink
+    % --- Evader Control: Inside Cut with Reset ---
+    if is_jinking && min(d1(k), d2(k)) > r_jink + 1.5
+        is_jinking = false;
+    end
+
+    if ~is_jinking && (d1(k) <= r_jink || d2(k) <= r_jink)
+        is_jinking = true;
         if d1(k) <= d2(k)
-            jink_dir = -1;
+            theta_target = theta_LOS1 + optimal_angle;
         else
-            jink_dir = 1;
+            theta_target = theta_LOS2 - optimal_angle;
         end
-        w_E = jink_dir * w_e_max;
+    end
+
+    if is_jinking
+        dtheta_E = atan2(sin(theta_target - theta_E(k)), ...
+            cos(theta_target - theta_E(k)));
+        if abs(dtheta_E) <= w_e_max * dt
+            w_E = dtheta_E / dt;
+        else
+            w_E = w_e_max * sign(dtheta_E);
+        end
     else
         vx_threat = (x_E(k) - x_P1(k))/d1(k) + (x_E(k) - x_P2(k))/d2(k);
         vy_threat = (y_E(k) - y_P1(k))/d1(k) + (y_E(k) - y_P2(k))/d2(k);
@@ -223,6 +237,53 @@ for scenario = 1:5
         scenario, jink_distances(max_idx), max_capture_time);
 end
 
+%% 7. Jink-Angle Sweep: Capture Time Histogram
+angle_offsets = deg2rad(0:5:180);
+angle_capture_times = zeros(5, numel(angle_offsets));
+
+for scenario = 1:5
+    for j = 1:numel(angle_offsets)
+        angle_capture_times(scenario, j) = simulate_capture_time_angle( ...
+            start_distances(scenario), flank_angles(scenario), r_jink, ...
+            angle_offsets(j), v_p, v_e, R_p, R_e, l_cap, tau_max, ...
+            T_max, dt);
+    end
+end
+
+figure('Color', 'w', 'Position', [80, 80, 1200, 850]);
+for scenario = 1:5
+    subplot(3, 2, scenario);
+    bar(rad2deg(angle_offsets), angle_capture_times(scenario, :), 1.0, ...
+        'FaceColor', [0.75, 0.45, 0.20], 'EdgeColor', 'none');
+    hold on; grid on;
+
+    [max_capture_time, max_idx] = max(angle_capture_times(scenario, :));
+    plot(rad2deg(angle_offsets(max_idx)), max_capture_time, 'r^', ...
+        'MarkerSize', 9, 'MarkerFaceColor', 'r');
+    xline(rad2deg(angle_offsets(max_idx)), 'r--', 'LineWidth', 1.2);
+
+    xlabel('Jink angle offset (degrees)');
+    ylabel('Capture time (s)');
+    title(sprintf('Scenario %d (r_{det} = %.0f m)', ...
+        scenario, start_distances(scenario)));
+    legend('Capture time', sprintf('Maximum: %.0f deg', ...
+        rad2deg(angle_offsets(max_idx))), 'Location', 'best');
+    set(gca, 'FontSize', 10, 'Box', 'on');
+end
+
+sgtitle(sprintf('Strategy 2: Capture Time by Jink Angle (r_{jink} = %.1f m)', ...
+    r_jink));
+exportgraphics(gcf, fullfile(plot_folder, 'jink_angle_capture_time.png'), ...
+    'Resolution', 200);
+close all;
+
+fprintf('Strategy 2 maximum capture angles by scenario:\n');
+for scenario = 1:5
+    [max_capture_time, max_idx] = max(angle_capture_times(scenario, :));
+    fprintf('  Scenario %d: %.0f degree angle -> %.2f s capture time\n', ...
+        scenario, rad2deg(angle_offsets(max_idx)), max_capture_time);
+end
+
 function capture_time = simulate_capture_time(r_det, alpha, r_jink, ...
     v_p, v_e, R_p, R_e, l_cap, tau_max, T_max, dt)
     w_p_max = v_p / R_p;
@@ -239,7 +300,9 @@ function capture_time = simulate_capture_time(r_det, alpha, r_jink, ...
     y_P2 = r_det * sin(-alpha);
     theta_P2 = 0;
     capture_time = T_max;
-    jink_dir = 0;
+    is_jinking = false;
+    theta_target = 0;
+    optimal_angle = deg2rad(110);
 
     for k = 1:N-1
         d1 = hypot(x_E - x_P1, y_E - y_P1);
@@ -270,15 +333,121 @@ function capture_time = simulate_capture_time(r_det, alpha, r_jink, ...
             w_P2 = w_p_max * sign(dtheta_P2);
         end
 
-        if jink_dir ~= 0
-            w_E = jink_dir * w_e_max;
-        elseif d1 <= r_jink || d2 <= r_jink
+        if is_jinking && min(d1, d2) > r_jink + 1.5
+            is_jinking = false;
+        end
+
+        if ~is_jinking && (d1 <= r_jink || d2 <= r_jink)
+            is_jinking = true;
             if d1 <= d2
-                jink_dir = -1;
+                theta_target = theta_LOS1 + optimal_angle;
             else
-                jink_dir = 1;
+                theta_target = theta_LOS2 - optimal_angle;
             end
-            w_E = jink_dir * w_e_max;
+        end
+
+        if is_jinking
+            dtheta_E = atan2(sin(theta_target - theta_E), ...
+                cos(theta_target - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
+        else
+            vx_threat = (x_E - x_P1) / d1 + (x_E - x_P2) / d2;
+            vy_threat = (y_E - y_P1) / d1 + (y_E - y_P2) / d2;
+            theta_flee = atan2(vy_threat, vx_threat);
+            dtheta_E = atan2(sin(theta_flee - theta_E), ...
+                cos(theta_flee - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
+        end
+
+        x_P1 = x_P1 + v_p * cos(theta_P1) * dt;
+        y_P1 = y_P1 + v_p * sin(theta_P1) * dt;
+        theta_P1 = theta_P1 + w_P1 * dt;
+        x_P2 = x_P2 + v_p * cos(theta_P2) * dt;
+        y_P2 = y_P2 + v_p * sin(theta_P2) * dt;
+        theta_P2 = theta_P2 + w_P2 * dt;
+        x_E = x_E + v_e * cos(theta_E) * dt;
+        y_E = y_E + v_e * sin(theta_E) * dt;
+        theta_E = theta_E + w_E * dt;
+    end
+end
+
+function capture_time = simulate_capture_time_angle(r_det, alpha, r_jink, ...
+    angle_offset, v_p, v_e, R_p, R_e, l_cap, tau_max, T_max, dt)
+    w_p_max = v_p / R_p;
+    w_e_max = v_e / R_e;
+    N = round(T_max / dt);
+
+    x_E = 0;
+    y_E = 0;
+    theta_E = 0;
+    x_P1 = -r_det * cos(alpha);
+    y_P1 = r_det * sin(alpha);
+    theta_P1 = 0;
+    x_P2 = -r_det * cos(-alpha);
+    y_P2 = r_det * sin(-alpha);
+    theta_P2 = 0;
+    capture_time = T_max;
+    is_jinking = false;
+    theta_target = 0;
+
+    for k = 1:N-1
+        d1 = hypot(x_E - x_P1, y_E - y_P1);
+        d2 = hypot(x_E - x_P2, y_E - y_P2);
+        if min(d1, d2) <= l_cap
+            capture_time = (k - 1) * dt;
+            return;
+        end
+
+        theta_LOS1 = atan2(y_E - y_P1, x_E - x_P1);
+        dtheta_P1 = atan2(sin(theta_LOS1 - theta_P1), ...
+            cos(theta_LOS1 - theta_P1));
+        if abs(dtheta_P1) <= w_p_max * dt
+            w_P1 = dtheta_P1 / dt;
+        else
+            w_P1 = w_p_max * sign(dtheta_P1);
+        end
+
+        tau = min(tau_max, d2 / v_p);
+        x_lead = x_E + tau * v_e * cos(theta_E);
+        y_lead = y_E + tau * v_e * sin(theta_E);
+        theta_LOS2 = atan2(y_lead - y_P2, x_lead - x_P2);
+        dtheta_P2 = atan2(sin(theta_LOS2 - theta_P2), ...
+            cos(theta_LOS2 - theta_P2));
+        if abs(dtheta_P2) <= w_p_max * dt
+            w_P2 = dtheta_P2 / dt;
+        else
+            w_P2 = w_p_max * sign(dtheta_P2);
+        end
+
+        if is_jinking && min(d1, d2) > r_jink + 1.5
+            is_jinking = false;
+        end
+
+        if ~is_jinking && (d1 <= r_jink || d2 <= r_jink)
+            is_jinking = true;
+            if d1 <= d2
+                theta_target = theta_LOS1 + angle_offset;
+            else
+                theta_target = theta_LOS2 - angle_offset;
+            end
+        end
+
+        if is_jinking
+            dtheta_E = atan2(sin(theta_target - theta_E), ...
+                cos(theta_target - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
         else
             vx_threat = (x_E - x_P1) / d1 + (x_E - x_P2) / d2;
             vy_threat = (y_E - y_P1) / d1 + (y_E - y_P2) / d2;
