@@ -169,7 +169,8 @@ for scenario = 1:5
     for j = 1:numel(jink_distances)
         capture_times(scenario, j) = simulate_capture_time( ...
             start_distances(scenario), start_angles(scenario), ...
-            jink_distances(j), v_p, v_e, R_p, R_e, l_cap, T_max, dt);
+            jink_distances(j), v_p, v_e, R_p, R_e, l_cap, T_max, dt, ...
+            deg2rad(110));
     end
 end
 
@@ -206,8 +207,54 @@ for scenario = 1:5
         scenario, jink_distances(max_idx), max_capture_time);
 end
 
+%% 7. Jink-Angle Sweep: Capture Time Histogram
+angle_offsets = deg2rad(0:5:180);
+angle_capture_times = zeros(5, numel(angle_offsets));
+
+for scenario = 1:5
+    for j = 1:numel(angle_offsets)
+        angle_capture_times(scenario, j) = simulate_capture_time( ...
+            start_distances(scenario), start_angles(scenario), r_jink, ...
+            v_p, v_e, R_p, R_e, l_cap, T_max, dt, angle_offsets(j));
+    end
+end
+
+figure('Color', 'w', 'Position', [80, 80, 1200, 850]);
+for scenario = 1:5
+    subplot(3, 2, scenario);
+    bar(rad2deg(angle_offsets), angle_capture_times(scenario, :), 1.0, ...
+        'FaceColor', [0.75, 0.45, 0.20], 'EdgeColor', 'none');
+    hold on; grid on;
+
+    [max_capture_time, max_idx] = max(angle_capture_times(scenario, :));
+    plot(rad2deg(angle_offsets(max_idx)), max_capture_time, 'r^', ...
+        'MarkerSize', 9, 'MarkerFaceColor', 'r');
+    xline(rad2deg(angle_offsets(max_idx)), 'r--', 'LineWidth', 1.2);
+
+    xlabel('Jink angle offset (degrees)');
+    ylabel('Capture time (s)');
+    title(sprintf('Scenario %d (r_{det} = %.0f m)', ...
+        scenario, start_distances(scenario)));
+    legend('Capture time', sprintf('Maximum: %.0f deg', ...
+        rad2deg(angle_offsets(max_idx))), 'Location', 'best');
+    set(gca, 'FontSize', 10, 'Box', 'on');
+end
+
+sgtitle(sprintf('Strategy 1: Capture Time by Jink Angle (r_{jink} = %.1f m)', ...
+    r_jink));
+exportgraphics(gcf, fullfile(plot_folder, 'jink_angle_capture_time.png'), ...
+    'Resolution', 200);
+close all;
+
+fprintf('Strategy 1 maximum capture angles by scenario:\n');
+for scenario = 1:5
+    [max_capture_time, max_idx] = max(angle_capture_times(scenario, :));
+    fprintf('  Scenario %d: %.0f degree angle -> %.2f s capture time\n', ...
+        scenario, rad2deg(angle_offsets(max_idx)), max_capture_time);
+end
+
 function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
-    v_p, v_e, R_p, R_e, l_cap, T_max, dt)
+    v_p, v_e, R_p, R_e, l_cap, T_max, dt, angle_offset)
     w_p_max = v_p / R_p;
     w_e_max = v_e / R_e;
     N = round(T_max / dt);
@@ -219,7 +266,6 @@ function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
     y_P = r_det * sin(alpha_1);
     theta_P = 0;
     capture_time = T_max;
-    optimal_angle = deg2rad(110);
     is_jinking = false;
     theta_target = 0;
 
@@ -245,7 +291,7 @@ function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
 
         if ~is_jinking && dist_P <= r_jink
             is_jinking = true;
-            theta_target = theta_LOS + optimal_angle;
+            theta_target = theta_LOS + angle_offset;
         end
 
         if is_jinking
