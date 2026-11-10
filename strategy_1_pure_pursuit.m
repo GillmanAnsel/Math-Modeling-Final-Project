@@ -43,6 +43,8 @@ theta_P(1) = 0;
 
 captured = false;
 end_idx = N;
+is_jinking = false;
+theta_target = 0;
 
 %% 3. Time-Stepping Simulation Loop (Forward Euler)
 for k = 1:N-1
@@ -63,11 +65,26 @@ for k = 1:N-1
         w_P = w_p_max * sign(dtheta_P);
     end
     
-    % --- Evader Control (Straight Flight + Break Turn Jink) ---
-    if dist_P(k) <= r_jink
-        w_E = w_e_max; 
+    % --- Evader Control (Break Turn with Overshoot Reset) ---
+    if is_jinking && dist_P(k) > r_jink + 1.5
+        is_jinking = false;
+    end
+
+    if ~is_jinking && dist_P(k) <= r_jink
+        is_jinking = true;
+        theta_target = theta_LOS + pi / 2;
+    end
+
+    if is_jinking
+        dtheta_E = atan2(sin(theta_target - theta_E(k)), ...
+            cos(theta_target - theta_E(k)));
+        if abs(dtheta_E) <= w_e_max * dt
+            w_E = dtheta_E / dt;
+        else
+            w_E = w_e_max * sign(dtheta_E);
+        end
     else
-        theta_flee = atan2(y_E(k) - y_P(k), x_E(k) - x_P(k));
+        theta_flee = theta_LOS;
         dtheta_E = atan2(sin(theta_flee - theta_E(k)), cos(theta_flee - theta_E(k)));
         if abs(dtheta_E) <= w_e_max * dt
             w_E = dtheta_E / dt;
@@ -141,4 +158,118 @@ ylabel('Separation Distance d_1(t) (m)', 'FontSize', 13);
 title('Part 1: Predator-Prey Separation Distance vs. Time', 'FontSize', 14);
 exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_separation.png', scenario)), 'Resolution', 200);
 close all;
+end
+
+%% 6. Jink-Distance Sweep: Capture Time Histogram
+jink_distances = 1.0:0.25:8.0;
+capture_times = zeros(5, numel(jink_distances));
+
+for scenario = 1:5
+    for j = 1:numel(jink_distances)
+        capture_times(scenario, j) = simulate_capture_time( ...
+            start_distances(scenario), start_angles(scenario), ...
+            jink_distances(j), v_p, v_e, R_p, R_e, l_cap, T_max, dt);
+    end
+end
+
+figure('Color', 'w', 'Position', [80, 80, 1200, 850]);
+for scenario = 1:5
+    subplot(3, 2, scenario);
+    bar(jink_distances, capture_times(scenario, :), 1.0, ...
+        'FaceColor', [0.25, 0.50, 0.85], 'EdgeColor', 'none');
+    hold on; grid on;
+
+    [max_capture_time, max_idx] = max(capture_times(scenario, :));
+    plot(jink_distances(max_idx), max_capture_time, 'r^', ...
+        'MarkerSize', 9, 'MarkerFaceColor', 'r');
+    xline(jink_distances(max_idx), 'r--', 'LineWidth', 1.2);
+
+    xlabel('Jink distance (m)');
+    ylabel('Capture time (s)');
+    title(sprintf('Scenario %d (r_{det} = %.0f m)', ...
+        scenario, start_distances(scenario)));
+    legend('Capture time', sprintf('Maximum: %.2f m', jink_distances(max_idx)), ...
+        'Location', 'best');
+    set(gca, 'FontSize', 10, 'Box', 'on');
+end
+
+sgtitle('Strategy 1: Capture Time for a Range of Jink Distances');
+exportgraphics(gcf, fullfile(plot_folder, 'jink_distance_capture_time.png'), ...
+    'Resolution', 200);
+close all;
+
+fprintf('Strategy 1 maximum capture times by scenario:\n');
+for scenario = 1:5
+    [max_capture_time, max_idx] = max(capture_times(scenario, :));
+    fprintf('  Scenario %d: %.2f m jink distance -> %.2f s capture time\n', ...
+        scenario, jink_distances(max_idx), max_capture_time);
+end
+
+function capture_time = simulate_capture_time(r_det, alpha_1, r_jink, ...
+    v_p, v_e, R_p, R_e, l_cap, T_max, dt)
+    w_p_max = v_p / R_p;
+    w_e_max = v_e / R_e;
+    N = round(T_max / dt);
+
+    x_E = 0;
+    y_E = 0;
+    theta_E = 0;
+    x_P = -r_det * cos(alpha_1);
+    y_P = r_det * sin(alpha_1);
+    theta_P = 0;
+    capture_time = T_max;
+    is_jinking = false;
+    theta_target = 0;
+
+    for k = 1:N-1
+        dist_P = hypot(x_E - x_P, y_E - y_P);
+        if dist_P <= l_cap
+            capture_time = (k - 1) * dt;
+            return;
+        end
+
+        theta_LOS = atan2(y_E - y_P, x_E - x_P);
+        dtheta_P = atan2(sin(theta_LOS - theta_P), ...
+            cos(theta_LOS - theta_P));
+        if abs(dtheta_P) <= w_p_max * dt
+            w_P = dtheta_P / dt;
+        else
+            w_P = w_p_max * sign(dtheta_P);
+        end
+
+        if is_jinking && dist_P > r_jink + 1.5
+            is_jinking = false;
+        end
+
+        if ~is_jinking && dist_P <= r_jink
+            is_jinking = true;
+            theta_target = theta_LOS + pi / 2;
+        end
+
+        if is_jinking
+            dtheta_E = atan2(sin(theta_target - theta_E), ...
+                cos(theta_target - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
+        else
+            theta_flee = theta_LOS;
+            dtheta_E = atan2(sin(theta_flee - theta_E), ...
+                cos(theta_flee - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
+        end
+
+        x_P = x_P + v_p * cos(theta_P) * dt;
+        y_P = y_P + v_p * sin(theta_P) * dt;
+        theta_P = theta_P + w_P * dt;
+        x_E = x_E + v_e * cos(theta_E) * dt;
+        y_E = y_E + v_e * sin(theta_E) * dt;
+        theta_E = theta_E + w_E * dt;
+    end
 end

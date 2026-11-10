@@ -46,6 +46,7 @@ x_P2(1) = -r_det * cos(-alpha); y_P2(1) =  r_det * sin(-alpha); theta_P2(1) = 0;
 
 captured = false;
 end_idx = N;
+jink_dir = 0;
 
 %% 3. Time-Stepping Simulation Loop (Forward Euler)
 for k = 1:N-1
@@ -80,11 +81,16 @@ for k = 1:N-1
         w_P2 = w_p_max * sign(dtheta_P2);
     end
     
-    % --- Evader Control: Evade Closest Threat ---
-    if d1(k) <= r_jink && d1(k) <= d2(k)
-        w_E = -w_e_max;
-    elseif d2(k) <= r_jink && d2(k) < d1(k)
-        w_E = w_e_max;
+    % --- Evader Control: Commit to the first jink direction ---
+    if jink_dir ~= 0
+        w_E = jink_dir * w_e_max;
+    elseif d1(k) <= r_jink || d2(k) <= r_jink
+        if d1(k) <= d2(k)
+            jink_dir = -1;
+        else
+            jink_dir = 1;
+        end
+        w_E = jink_dir * w_e_max;
     else
         vx_threat = (x_E(k) - x_P1(k))/d1(k) + (x_E(k) - x_P2(k))/d2(k);
         vy_threat = (y_E(k) - y_P1(k))/d1(k) + (y_E(k) - y_P2(k))/d2(k);
@@ -169,4 +175,131 @@ title('Part 2: Pair Separation Distances vs. Time', 'FontSize', 14);
 legend('Location', 'southoutside', 'NumColumns', 2);
 exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_separation.png', scenario)), 'Resolution', 200);
 close all;
+end
+
+%% 6. Jink-Distance Sweep: Capture Time Histogram
+jink_distances = 1.0:0.25:8.0;
+capture_times = zeros(5, numel(jink_distances));
+
+for scenario = 1:5
+    for j = 1:numel(jink_distances)
+        capture_times(scenario, j) = simulate_capture_time( ...
+            start_distances(scenario), flank_angles(scenario), ...
+            jink_distances(j), v_p, v_e, R_p, R_e, l_cap, ...
+            tau_max, T_max, dt);
+    end
+end
+
+figure('Color', 'w', 'Position', [80, 80, 1200, 850]);
+for scenario = 1:5
+    subplot(3, 2, scenario);
+    bar(jink_distances, capture_times(scenario, :), 1.0, ...
+        'FaceColor', [0.25, 0.65, 0.35], 'EdgeColor', 'none');
+    hold on; grid on;
+
+    [max_capture_time, max_idx] = max(capture_times(scenario, :));
+    plot(jink_distances(max_idx), max_capture_time, 'r^', ...
+        'MarkerSize', 9, 'MarkerFaceColor', 'r');
+    xline(jink_distances(max_idx), 'r--', 'LineWidth', 1.2);
+
+    xlabel('Jink distance (m)');
+    ylabel('Capture time (s)');
+    title(sprintf('Scenario %d (r_{det} = %.0f m)', ...
+        scenario, start_distances(scenario)));
+    legend('Capture time', sprintf('Maximum: %.2f m', jink_distances(max_idx)), ...
+        'Location', 'best');
+    set(gca, 'FontSize', 10, 'Box', 'on');
+end
+
+sgtitle('Strategy 2: Capture Time for a Range of Jink Distances');
+exportgraphics(gcf, fullfile(plot_folder, 'jink_distance_capture_time.png'), ...
+    'Resolution', 200);
+close all;
+
+fprintf('Strategy 2 maximum capture times by scenario:\n');
+for scenario = 1:5
+    [max_capture_time, max_idx] = max(capture_times(scenario, :));
+    fprintf('  Scenario %d: %.2f m jink distance -> %.2f s capture time\n', ...
+        scenario, jink_distances(max_idx), max_capture_time);
+end
+
+function capture_time = simulate_capture_time(r_det, alpha, r_jink, ...
+    v_p, v_e, R_p, R_e, l_cap, tau_max, T_max, dt)
+    w_p_max = v_p / R_p;
+    w_e_max = v_e / R_e;
+    N = round(T_max / dt);
+
+    x_E = 0;
+    y_E = 0;
+    theta_E = 0;
+    x_P1 = -r_det * cos(alpha);
+    y_P1 = r_det * sin(alpha);
+    theta_P1 = 0;
+    x_P2 = -r_det * cos(-alpha);
+    y_P2 = r_det * sin(-alpha);
+    theta_P2 = 0;
+    capture_time = T_max;
+    jink_dir = 0;
+
+    for k = 1:N-1
+        d1 = hypot(x_E - x_P1, y_E - y_P1);
+        d2 = hypot(x_E - x_P2, y_E - y_P2);
+        if min(d1, d2) <= l_cap
+            capture_time = (k - 1) * dt;
+            return;
+        end
+
+        theta_LOS1 = atan2(y_E - y_P1, x_E - x_P1);
+        dtheta_P1 = atan2(sin(theta_LOS1 - theta_P1), ...
+            cos(theta_LOS1 - theta_P1));
+        if abs(dtheta_P1) <= w_p_max * dt
+            w_P1 = dtheta_P1 / dt;
+        else
+            w_P1 = w_p_max * sign(dtheta_P1);
+        end
+
+        tau = min(tau_max, d2 / v_p);
+        x_lead = x_E + tau * v_e * cos(theta_E);
+        y_lead = y_E + tau * v_e * sin(theta_E);
+        theta_LOS2 = atan2(y_lead - y_P2, x_lead - x_P2);
+        dtheta_P2 = atan2(sin(theta_LOS2 - theta_P2), ...
+            cos(theta_LOS2 - theta_P2));
+        if abs(dtheta_P2) <= w_p_max * dt
+            w_P2 = dtheta_P2 / dt;
+        else
+            w_P2 = w_p_max * sign(dtheta_P2);
+        end
+
+        if jink_dir ~= 0
+            w_E = jink_dir * w_e_max;
+        elseif d1 <= r_jink || d2 <= r_jink
+            if d1 <= d2
+                jink_dir = -1;
+            else
+                jink_dir = 1;
+            end
+            w_E = jink_dir * w_e_max;
+        else
+            vx_threat = (x_E - x_P1) / d1 + (x_E - x_P2) / d2;
+            vy_threat = (y_E - y_P1) / d1 + (y_E - y_P2) / d2;
+            theta_flee = atan2(vy_threat, vx_threat);
+            dtheta_E = atan2(sin(theta_flee - theta_E), ...
+                cos(theta_flee - theta_E));
+            if abs(dtheta_E) <= w_e_max * dt
+                w_E = dtheta_E / dt;
+            else
+                w_E = w_e_max * sign(dtheta_E);
+            end
+        end
+
+        x_P1 = x_P1 + v_p * cos(theta_P1) * dt;
+        y_P1 = y_P1 + v_p * sin(theta_P1) * dt;
+        theta_P1 = theta_P1 + w_P1 * dt;
+        x_P2 = x_P2 + v_p * cos(theta_P2) * dt;
+        y_P2 = y_P2 + v_p * sin(theta_P2) * dt;
+        theta_P2 = theta_P2 + w_P2 * dt;
+        x_E = x_E + v_e * cos(theta_E) * dt;
+        y_E = y_E + v_e * sin(theta_E) * dt;
+        theta_E = theta_E + w_E * dt;
+    end
 end
