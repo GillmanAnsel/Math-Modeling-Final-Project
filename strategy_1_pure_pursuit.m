@@ -111,8 +111,13 @@ figure('Color', 'w', 'Position', [80, 80, 1050, 700]);
 hold on; grid on; axis equal;
 
 % Plot trajectories
-plot(x_E(1:end_idx), y_E(1:end_idx), 'b-', 'LineWidth', 2.2, 'DisplayName', 'Evader Trajectory (E)');
-plot(x_P(1:end_idx), y_P(1:end_idx), 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer Trajectory (P_1)');
+trajectory_alpha = 0.75;
+patch(x_E(1:end_idx), y_E(1:end_idx), 'b', 'FaceColor', 'none', ...
+    'EdgeColor', 'b', 'EdgeAlpha', trajectory_alpha, 'LineStyle', '-', ...
+    'LineWidth', 2.2, 'DisplayName', 'Evader Trajectory (E)');
+patch(x_P(1:end_idx), y_P(1:end_idx), 'r', 'FaceColor', 'none', ...
+    'EdgeColor', 'r', 'EdgeAlpha', trajectory_alpha, 'LineStyle', '--', ...
+    'LineWidth', 2.0, 'DisplayName', 'Pursuer Trajectory (P_1)');
 
 % Plot Start Positions (t = 0)
 plot(x_E(1), y_E(1), 'bo', 'MarkerSize', 8, 'MarkerFaceColor', 'b', 'HandleVisibility', 'off');

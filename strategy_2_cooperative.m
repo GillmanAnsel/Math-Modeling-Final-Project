@@ -139,9 +139,16 @@ figure('Color', 'w', 'Position', [80, 80, 1050, 700]);
 hold on; grid on; axis equal;
 
 % Plot all 3 trajectories on the same axis
-plot(x_E(1:end_idx),  y_E(1:end_idx),  'b-',  'LineWidth', 2.2, 'DisplayName', 'Evader (E)');
-plot(x_P1(1:end_idx), y_P1(1:end_idx), 'r--', 'LineWidth', 2.0, 'DisplayName', 'Raptor 1 (P_1 - Pure Pursuit)');
-plot(x_P2(1:end_idx), y_P2(1:end_idx), 'g-.', 'LineWidth', 2.0, 'DisplayName', 'Raptor 2 (P_2 - Lead Pursuit)');
+trajectory_alpha = 0.75;
+patch(x_E(1:end_idx),  y_E(1:end_idx),  'b', 'FaceColor', 'none', ...
+    'EdgeColor', 'b', 'EdgeAlpha', trajectory_alpha, 'LineStyle', '-', ...
+    'LineWidth', 2.2, 'DisplayName', 'Evader (E)');
+patch(x_P1(1:end_idx), y_P1(1:end_idx), 'r', 'FaceColor', 'none', ...
+    'EdgeColor', 'r', 'EdgeAlpha', trajectory_alpha, 'LineStyle', '--', ...
+    'LineWidth', 2.0, 'DisplayName', 'Raptor 1 (P_1 - Pure Pursuit)');
+patch(x_P2(1:end_idx), y_P2(1:end_idx), 'g', 'FaceColor', 'none', ...
+    'EdgeColor', 'g', 'EdgeAlpha', trajectory_alpha, 'LineStyle', '-.', ...
+    'LineWidth', 2.0, 'DisplayName', 'Raptor 2 (P_2 - Lead Pursuit)');
 
 % Plot Start Positions (t = 0)
 plot(x_E(1),  y_E(1),  'bo', 'MarkerSize', 8, 'MarkerFaceColor', 'b', 'HandleVisibility', 'off');
