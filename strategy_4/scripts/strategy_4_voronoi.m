@@ -188,8 +188,8 @@ quiver(x_P2(end_idx), y_P2(end_idx), cos(theta_P2(end_idx)), sin(theta_P2(end_id
 set(gca, 'FontSize', 12, 'LineWidth', 1.0, 'Box', 'on');
 xlabel('Horizontal Position x (m)', 'FontSize', 13);
 ylabel('Vertical Position y (m)', 'FontSize', 13);
-title(sprintf('Voronoi Centroid Strategy Trajectories (r_{det} = %.0f m, t_{final} = %.2f s)', ...
-    r_det, t_vec(end_idx)), 'FontSize', 14);
+title(sprintf('Voronoi Centroid Strategy Trajectories (r_{det} = %.0f m, t_{final} = %.2f s, Min Dist = %.2f m)', ...
+    r_det, t_vec(end_idx), min([d1(1:end_idx), d2(1:end_idx)], [], 'all')), 'FontSize', 14);
 legend('Location', 'best');
 exportgraphics(gcf, fullfile(plot_folder, 'voronoi_static_trajectory.png'), 'Resolution', 200);
 
@@ -234,9 +234,9 @@ h_trP1 = plot(ax, NaN, NaN, 'r--', 'LineWidth', 1.8, 'HandleVisibility', 'off');
 h_trP2 = plot(ax, NaN, NaN, 'g-.', 'LineWidth', 1.8, 'HandleVisibility', 'off');
 
 % Player position markers
-h_posE  = plot(ax, NaN, NaN, 'bo', 'MarkerSize', 9, 'MarkerFaceColor', 'b', 'DisplayName', 'Evader u_E(t)');
-h_posP1 = plot(ax, NaN, NaN, 'rs', 'MarkerSize', 9, 'MarkerFaceColor', 'r', 'DisplayName', 'Raptor 1 u_{P1}(t)');
-h_posP2 = plot(ax, NaN, NaN, 'gd', 'MarkerSize', 9, 'MarkerFaceColor', [0, 0.6, 0], 'DisplayName', 'Raptor 2 u_{P2}(t)');
+h_posE  = plot(ax, NaN, NaN, 'bo', 'MarkerSize', 9, 'MarkerFaceColor', 'b', 'DisplayName', 'Evader (Voronoi Escape)');
+h_posP1 = plot(ax, NaN, NaN, 'rs', 'MarkerSize', 9, 'MarkerFaceColor', 'r', 'DisplayName', 'Raptor 1 (P_1 - Voronoi Pursuit)');
+h_posP2 = plot(ax, NaN, NaN, 'gd', 'MarkerSize', 9, 'MarkerFaceColor', [0, 0.6, 0], 'DisplayName', 'Raptor 2 (P_2 - Voronoi Pursuit)');
 
 % Centroid markers
 h_CE  = plot(ax, NaN, NaN, 'b*', 'MarkerSize', 9, 'LineWidth', 1.5, 'DisplayName', 'Centroid C_{VE}');
@@ -284,8 +284,9 @@ for k = 1:frame_step:end_idx
     set(h_CP1, 'XData', C_P1_hist(1,k), 'YData', C_P1_hist(2,k));
     set(h_CP2, 'XData', C_P2_hist(1,k), 'YData', C_P2_hist(2,k));
     
-    set(title_handle, 'String', sprintf('Voronoi ECBVC Tracking (t = %.2f s, min d_i = %.2f m)', ...
-        t_vec(k), min(d1(k), d2(k))));
+    set(title_handle, 'String', sprintf(['Voronoi ECBVC Tracking (r_{det} = %.0f m, ' ...
+        't_{final} = %.2f s, Min Dist = %.2f m, t = %.2f s)'], ...
+        r_det, t_vec(end_idx), min([d1, d2]), t_vec(k)));
     
     drawnow;
     writeVideo(vw, getframe(fig_anim));

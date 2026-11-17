@@ -1,5 +1,5 @@
 function create_trajectory_animation_1(t, x_E, y_E, theta_E, x_P, y_P, theta_P, ...
-    l_cap, output_file)
+    r_det, l_cap, output_file)
     fig = figure('Color', 'w', 'Visible', 'off');
     ax = axes('Parent', fig);
     hold(ax, 'on'); grid(ax, 'on'); axis(ax, 'equal');
@@ -10,8 +10,8 @@ function create_trajectory_animation_1(t, x_E, y_E, theta_E, x_P, y_P, theta_P, 
     ylim(ax, [min(all_y) - pad, max(all_y) + pad]);
     xlabel(ax, 'Horizontal Position x (m)');
     ylabel(ax, 'Vertical Position y (m)');
-    h_E = plot(ax, NaN, NaN, 'b-', 'LineWidth', 2.0, 'DisplayName', 'Evader');
-    h_P = plot(ax, NaN, NaN, 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer');
+    h_E = plot(ax, NaN, NaN, 'b-', 'LineWidth', 2.0, 'DisplayName', 'Evader (E)');
+    h_P = plot(ax, NaN, NaN, 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer (Pure Pursuit)');
     h_arrow_E = quiver(ax, NaN, NaN, NaN, NaN, 1.5, 'b', 'LineWidth', 1.8, 'MaxHeadSize', 2);
     h_arrow_P = quiver(ax, NaN, NaN, NaN, NaN, 1.5, 'r', 'LineWidth', 1.8, 'MaxHeadSize', 2);
     legend(ax, 'Location', 'best');
@@ -20,6 +20,9 @@ function create_trajectory_animation_1(t, x_E, y_E, theta_E, x_P, y_P, theta_P, 
     video.FrameRate = 30;
     open(video);
     frame_step = max(1, round(0.02 / (t(2) - t(1))));
+    t_final = t(end);
+    dist_P = hypot(x_P - x_E, y_P - y_E);
+    min_distance = min(dist_P);
     for k = 1:frame_step:numel(t)
         set(h_E, 'XData', x_E(1:k), 'YData', y_E(1:k));
         set(h_P, 'XData', x_P(1:k), 'YData', y_P(1:k));
@@ -27,7 +30,9 @@ function create_trajectory_animation_1(t, x_E, y_E, theta_E, x_P, y_P, theta_P, 
             'UData', cos(theta_E(k)), 'VData', sin(theta_E(k)));
         set(h_arrow_P, 'XData', x_P(k), 'YData', y_P(k), ...
             'UData', cos(theta_P(k)), 'VData', sin(theta_P(k)));
-        set(title_handle, 'String', sprintf('Strategy 1 Trajectory (t = %.2f s)', t(k)));
+        set(title_handle, 'String', sprintf(['Strategy 1 Trajectory (r_{det} = %.0f m, ' ...
+            't_{final} = %.2f s, Min Dist = %.2f m, t = %.2f s)'], ...
+            r_det, t_final, min_distance, t(k)));
         drawnow;
         writeVideo(video, getframe(fig));
     end

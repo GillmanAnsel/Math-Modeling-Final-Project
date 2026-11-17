@@ -120,7 +120,7 @@ hold on; grid on; axis equal;
 
 % Plot trajectories
 plot(x_E(1:end_idx), y_E(1:end_idx), 'b-', 'LineWidth', 2.2, 'DisplayName', 'Evader Trajectory (E)');
-plot(x_P(1:end_idx), y_P(1:end_idx), 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer Trajectory (P_1)');
+plot(x_P(1:end_idx), y_P(1:end_idx), 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer (P_1 - Pure Pursuit)');
 
 % Plot Start Positions (t = 0)
 plot(x_E(1), y_E(1), 'bo', 'MarkerSize', 8, 'MarkerFaceColor', 'b', 'HandleVisibility', 'off');
@@ -152,7 +152,7 @@ legend('Location', 'best');
 exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_trajectory.png', scenario)), 'Resolution', 200);
 create_trajectory_animation_1(t_vec(1:end_idx), x_E(1:end_idx), y_E(1:end_idx), ...
     theta_E(1:end_idx), x_P(1:end_idx), y_P(1:end_idx), theta_P(1:end_idx), ...
-    l_cap, fullfile(animation_folder, sprintf('scenario_%d.mp4', scenario)));
+    r_det, l_cap, fullfile(animation_folder, sprintf('scenario_%d.mp4', scenario)));
 
 %% 5. Figure 2: Separation Distance Plot
 figure('Color', 'w', 'Position', [180, 120, 850, 550]);

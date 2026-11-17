@@ -1,5 +1,5 @@
 function create_trajectory_animation_3(t, x_E, y_E, theta_E, ...
-    x_P1, y_P1, theta_P1, x_P2, y_P2, theta_P2, l_cap, output_file)
+    x_P1, y_P1, theta_P1, x_P2, y_P2, theta_P2, r_det, l_cap, output_file)
     fig = figure('Color', 'w', 'Visible', 'off');
     ax = axes('Parent', fig);
     hold(ax, 'on'); grid(ax, 'on'); axis(ax, 'equal');
@@ -10,9 +10,9 @@ function create_trajectory_animation_3(t, x_E, y_E, theta_E, ...
     ylim(ax, [min(all_y) - pad, max(all_y) + pad]);
     xlabel(ax, 'Horizontal Position x (m)');
     ylabel(ax, 'Vertical Position y (m)');
-    h_E = plot(ax, NaN, NaN, 'b-', 'LineWidth', 2.0, 'DisplayName', 'Evader');
-    h_P1 = plot(ax, NaN, NaN, 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer 1');
-    h_P2 = plot(ax, NaN, NaN, 'g-.', 'LineWidth', 2.0, 'DisplayName', 'Pursuer 2');
+    h_E = plot(ax, NaN, NaN, 'b-', 'LineWidth', 2.0, 'DisplayName', 'Evader (E)');
+    h_P1 = plot(ax, NaN, NaN, 'r--', 'LineWidth', 2.0, 'DisplayName', 'Pursuer 1 (P_1 - Pure Pursuit)');
+    h_P2 = plot(ax, NaN, NaN, 'g-.', 'LineWidth', 2.0, 'DisplayName', 'Pursuer 2 (P_2 - Pure Pursuit)');
     h_arrow_E = quiver(ax, NaN, NaN, NaN, NaN, 1.5, 'b', 'LineWidth', 1.8, 'MaxHeadSize', 2);
     h_arrow_P1 = quiver(ax, NaN, NaN, NaN, NaN, 1.5, 'r', 'LineWidth', 1.8, 'MaxHeadSize', 2);
     h_arrow_P2 = quiver(ax, NaN, NaN, NaN, NaN, 1.5, 'g', 'LineWidth', 1.8, 'MaxHeadSize', 2);
@@ -22,6 +22,10 @@ function create_trajectory_animation_3(t, x_E, y_E, theta_E, ...
     video.FrameRate = 30;
     open(video);
     frame_step = max(1, round(0.02 / (t(2) - t(1))));
+    t_final = t(end);
+    d1 = hypot(x_P1 - x_E, y_P1 - y_E);
+    d2 = hypot(x_P2 - x_E, y_P2 - y_E);
+    min_distance = min([d1, d2], [], 'all');
     for k = 1:frame_step:numel(t)
         set(h_E, 'XData', x_E(1:k), 'YData', y_E(1:k));
         set(h_P1, 'XData', x_P1(1:k), 'YData', y_P1(1:k));
@@ -32,7 +36,9 @@ function create_trajectory_animation_3(t, x_E, y_E, theta_E, ...
             'UData', cos(theta_P1(k)), 'VData', sin(theta_P1(k)));
         set(h_arrow_P2, 'XData', x_P2(k), 'YData', y_P2(k), ...
             'UData', cos(theta_P2(k)), 'VData', sin(theta_P2(k)));
-        set(title_handle, 'String', sprintf('Strategy 3 Trajectory (t = %.2f s)', t(k)));
+        set(title_handle, 'String', sprintf(['Strategy 3 Trajectory (r_{det} = %.0f m, ' ...
+            't_{final} = %.2f s, Min Dist = %.2f m, t = %.2f s)'], ...
+            r_det, t_final, min_distance, t(k)));
         drawnow;
         writeVideo(video, getframe(fig));
     end
