@@ -186,7 +186,7 @@ for scenario = 1:numel(start_distances)
         scenario, r_det, t_vec(end_idx)), 'FontSize', 14);
     legend('Location', 'best');
     
-    exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_voronoi_trajectory.png', scenario)), 'Resolution', 200);
+    exportgraphics(gcf, fullfile(plot_folder, sprintf('strategy_4_trajectory_%d_normal.png', scenario)), 'Resolution', 200);
     
     %% 5. Static Separation Distance Plot
     figure('Color', 'w', 'Position', [160, 120, 850, 520], 'Visible', 'off');
@@ -201,7 +201,7 @@ for scenario = 1:numel(start_distances)
         scenario, r_det), 'FontSize', 14);
     legend('Location', 'northeast');
     
-    exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_voronoi_separation.png', scenario)), 'Resolution', 200);
+    exportgraphics(gcf, fullfile(plot_folder, sprintf('strategy_4_separation_%d_normal.png', scenario)), 'Resolution', 200);
     
     %% 6. Animation Setup and Video Write
     fig_anim = figure('Color', 'w', 'Position', [100, 100, 1100, 750], 'Visible', 'off');
@@ -326,7 +326,7 @@ ylabel('Vertical Position y (m)', 'FontSize', 13);
 title(sprintf('Voronoi Centroid Strategy Trajectories (r_{det} = %.0f m, t_{final} = %.2f s, Min Dist = %.2f m)', ...
     r_det, t_vec(end_idx), min([d1(1:end_idx), d2(1:end_idx)], [], 'all')), 'FontSize', 14);
 legend('Location', 'best');
-exportgraphics(gcf, fullfile(plot_folder, 'voronoi_static_trajectory.png'), 'Resolution', 200);
+exportgraphics(gcf, fullfile(plot_folder, 'strategy_4_trajectory_normal.png'), 'Resolution', 200);
 
 %% 5. Figure 2: Static Separation Distance Plot
 figure('Color', 'w', 'Position', [160, 120, 850, 520]);
@@ -340,7 +340,7 @@ ylabel('Distance to Prey (m)', 'FontSize', 13);
 title(sprintf('Voronoi Strategy: Separation Distances vs. Time (t_{final} = %.2f s)', ...
     t_vec(end_idx)), 'FontSize', 14);
 legend('Location', 'northeast');
-exportgraphics(gcf, fullfile(plot_folder, 'voronoi_separation_distance.png'), 'Resolution', 200);
+exportgraphics(gcf, fullfile(plot_folder, 'strategy_4_separation_normal.png'), 'Resolution', 200);
 
 %% 6. Animation: Tracking Moving Bounding Box & Voronoi Cells for All 3 Players
 fig_anim = figure('Color', 'w', 'Position', [100, 100, 1100, 750]);

@@ -149,7 +149,7 @@ ylabel('Vertical Position y (m)', 'FontSize', 13);
 title(sprintf('Part 1: Solitary Pursuit Trajectories (r_{det} = %.0f m, t_{final} = %.2f s, Min Dist = %.2f m)', ...
     r_det, final_capture_times(scenario), min(dist_P(1:end_idx))), 'FontSize', 14);
 legend('Location', 'best');
-exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_trajectory.png', scenario)), 'Resolution', 200);
+exportgraphics(gcf, fullfile(plot_folder, sprintf('strategy_1_trajectory_%d_realistic.png', scenario)), 'Resolution', 200);
 create_trajectory_animation_1(t_vec(1:end_idx), x_E(1:end_idx), y_E(1:end_idx), ...
     theta_E(1:end_idx), x_P(1:end_idx), y_P(1:end_idx), theta_P(1:end_idx), ...
     r_det, l_cap, fullfile(animation_folder, sprintf('scenario_%d.mp4', scenario)));
@@ -165,7 +165,7 @@ xlabel('Time t (s)', 'FontSize', 13);
 ylabel('Separation Distance d_1(t) (m)', 'FontSize', 13);
 title(sprintf('Part 1: Predator-Prey Separation Distance vs. Time (t_{final} = %.2f s)', ...
     final_capture_times(scenario)), 'FontSize', 14);
-exportgraphics(gcf, fullfile(plot_folder, sprintf('scenario_%d_separation.png', scenario)), 'Resolution', 200);
+exportgraphics(gcf, fullfile(plot_folder, sprintf('strategy_1_separation_%d_realistic.png', scenario)), 'Resolution', 200);
 close all;
 end
 
@@ -204,7 +204,7 @@ for scenario = 1:5
 end
 
 sgtitle('Strategy 1: Capture Time for a Range of Jink Distances (final times shown per scenario)');
-exportgraphics(gcf, fullfile(plot_folder, 'jink_distance_capture_time.png'), ...
+exportgraphics(gcf, fullfile(plot_folder, 'strategy_1_jink_distance_capture_time_realistic.png'), ...
     'Resolution', 200);
 close all;
 
@@ -250,7 +250,7 @@ end
 
 sgtitle(sprintf('Strategy 1 (Realistic Radius): Capture Time by Jink Angle (r_{jink} = %.1f m)', ...
     r_jink));
-exportgraphics(gcf, fullfile(plot_folder, 'jink_angle_capture_time.png'), ...
+exportgraphics(gcf, fullfile(plot_folder, 'strategy_1_jink_angle_capture_time_realistic.png'), ...
     'Resolution', 200);
 close all;
 

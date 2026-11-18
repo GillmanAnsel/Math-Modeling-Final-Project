@@ -169,7 +169,7 @@ legend('Solitary', 'Pair Lead Pursuit', 'Pair Voronoi', 'Location', 'southeast')
 ylim([0 105]);
 
 sgtitle('Parameter Sensitivity Analysis Across Hunting Regimes (l_{cap} = 1.0 m)', 'FontWeight', 'bold');
-saveas(gcf, 'sensitivity_analysis_plots.png');
+saveas(gcf, 'sensitivity_analysis_normal.png');
 
 %% ========================================================================
 %% EXACT SIMULATION ENGINE FROM strategy_1 & strategy_2_realistic_radius.m
